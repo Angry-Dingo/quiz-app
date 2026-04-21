@@ -64,19 +64,64 @@ export async function onRequestGet(context) {
     }
 
     const url = new URL(request.url);
-    const username = url.searchParams.get('username') || 'anonymous';
+    const username = url.searchParams.get('username');
 
-    const userData = await env.USER_DATA.get(username);
-
-    return new Response(
-      userData || '{}',
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
+    // 如果没有提供 username 参数，返回所有用户的数据
+    if (!username) {
+      try {
+        // 列出所有 KV 键
+        const keys = await env.USER_DATA.list();
+        
+        // 获取所有用户数据
+        const allUsers = [];
+        
+        for (const key of keys.keys) {
+          const userData = await env.USER_DATA.get(key.name);
+          if (userData) {
+            try {
+              const parsedUserData = JSON.parse(userData);
+              allUsers.push(parsedUserData);
+            } catch (parseError) {
+              // 解析失败，跳过该用户
+            }
+          }
         }
+        
+        return new Response(
+          JSON.stringify(allUsers),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            }
+          }
+        );
+      } catch (listError) {
+        return new Response(
+          JSON.stringify({ error: listError.message }),
+          {
+            status: 500,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            }
+          }
+        );
       }
-    );
+    } else {
+      // 有提供 username 参数，返回指定用户的数据
+      const userData = await env.USER_DATA.get(username);
+
+      return new Response(
+        userData || '{}',
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        }
+      );
+    }
   } catch (error) {
     return new Response(
       JSON.stringify({ error: error.message }),
