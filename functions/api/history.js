@@ -1,34 +1,56 @@
 // 历史记录 API
 export async function onRequestGet(context) {
   try {
-    // 直接返回测试数据，确保 API 端点能够正常返回数据
-    const testData = [
-      {
-        "date": "2026-04-20T12:10:37.378Z",
-        "score": 6,
-        "correctCount": 3,
-        "totalCount": 50,
-        "timeUsed": 1,
-        "username": "俞卢涛",
-        "selectedMajor": "高压",
-        "majorName": "高压",
-        "type": "practice"
-      },
-      {
-        "date": "2026-04-20T12:35:08.463Z",
-        "score": 38,
-        "correctCount": 19,
-        "totalCount": 50,
-        "timeUsed": 1,
-        "username": "测试",
-        "selectedMajor": "继保",
-        "majorName": "继保",
-        "type": "practice"
-      }
-    ];
+    const { env } = context;
     
+    // 检查 USER_HISTORY 是否存在
+    if (!env.USER_HISTORY) {
+      return new Response(
+        JSON.stringify({ error: 'USER_HISTORY KV namespace not bound' }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        }
+      );
+    }
+    
+    // 尝试列出所有 KV 键
+    const keys = await env.USER_HISTORY.list();
+    
+    // 如果没有找到任何键，返回空数组
+    if (keys.keys.length === 0) {
+      return new Response(
+        JSON.stringify([]),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        }
+      );
+    }
+    
+    // 获取所有历史记录
+    const allHistory = [];
+    
+    for (const key of keys.keys) {
+      const history = await env.USER_HISTORY.get(key.name);
+      if (history) {
+        try {
+          const parsedHistory = JSON.parse(history);
+          allHistory.push(parsedHistory);
+        } catch (parseError) {
+          // 解析失败，跳过该记录
+        }
+      }
+    }
+    
+    // 返回获取到的历史记录
     return new Response(
-      JSON.stringify(testData),
+      JSON.stringify(allHistory),
       {
         headers: {
           'Content-Type': 'application/json',
