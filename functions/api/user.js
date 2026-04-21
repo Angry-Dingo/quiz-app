@@ -2,11 +2,26 @@
 export async function onRequestPut(context) {
   try {
     const { env, request } = context;
+
+    // 检查 USER_DATA 是否存在
+    if (!env.USER_DATA) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'USER_DATA KV namespace not bound' }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        }
+      );
+    }
+
     const data = await request.json();
     const userId = data.username || 'anonymous';
-    
+
     await env.USER_DATA.put(userId, JSON.stringify(data));
-    
+
     return new Response(
       JSON.stringify({ success: true }),
       {
@@ -33,11 +48,26 @@ export async function onRequestPut(context) {
 export async function onRequestGet(context) {
   try {
     const { env, request } = context;
+
+    // 检查 USER_DATA 是否存在
+    if (!env.USER_DATA) {
+      return new Response(
+        JSON.stringify({ error: 'USER_DATA KV namespace not bound' }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        }
+      );
+    }
+
     const url = new URL(request.url);
     const username = url.searchParams.get('username') || 'anonymous';
-    
+
     const userData = await env.USER_DATA.get(username);
-    
+
     return new Response(
       userData || '{}',
       {
