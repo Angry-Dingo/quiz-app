@@ -1,4 +1,4 @@
-// 题目 API
+// 题目操作 API
 import { Router } from 'itty-router'
 
 const router = Router()
@@ -10,6 +10,7 @@ router.put('/api/question/:id/explanation', async (request, env) => {
     const data = await request.json()
     const explanation = data.explanation
     const userId = data.userId
+    const isExam = data.isExam || false  // 添加题库类型参数
 
     // 检查必要参数
     if (!questionId || !explanation) {
@@ -25,8 +26,11 @@ router.put('/api/question/:id/explanation', async (request, env) => {
       )
     }
 
+    // 根据题库类型选择KV命名空间
+    const kvNamespace = isExam ? env.EXAM_QUESTION_BANK : env.QUESTION_BANK
+
     // 从 KV 获取所有题目
-    const allQuestions = await env.QUESTION_BANK.get('all_questions')
+    const allQuestions = await kvNamespace.get('all_questions')
     if (!allQuestions) {
       return new Response(
         JSON.stringify({ success: false, message: 'Questions not found' }),
@@ -56,7 +60,7 @@ router.put('/api/question/:id/explanation', async (request, env) => {
     })
 
     // 保存更新后的题目
-    await env.QUESTION_BANK.put('all_questions', JSON.stringify(updatedQuestions))
+    await kvNamespace.put('all_questions', JSON.stringify(updatedQuestions))
 
     return new Response(
       JSON.stringify({ success: true, message: 'Explanation added successfully' }),
