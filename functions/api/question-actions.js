@@ -1,16 +1,16 @@
 // 题目操作 API
-import { Router } from 'itty-router'
-
-const router = Router()
 
 // 更新题目解析
-router.put('/api/question/:id/explanation', async (request, env) => {
+export async function onRequestPut(context) {
   try {
-    const questionId = request.params.id
+    const { env, request } = context
     const data = await request.json()
+    const questionId = data.questionId
     const explanation = data.explanation
     const userId = data.userId
     const isExam = data.isExam || false  // 添加题库类型参数
+
+    console.log('收到更新题目解析请求:', { questionId, explanation, userId, isExam })
 
     // 检查必要参数
     if (!questionId || !explanation) {
@@ -48,7 +48,8 @@ router.put('/api/question/:id/explanation', async (request, env) => {
 
     // 查找并更新题目
     const updatedQuestions = questions.map(q => {
-      if (q.id.toString() === questionId) {
+      if (q.id.toString() === questionId.toString()) {
+        console.log('找到匹配的题目 ID:', q.id, '更新解析')
         return {
           ...q,
           explanation,
@@ -62,6 +63,8 @@ router.put('/api/question/:id/explanation', async (request, env) => {
     // 保存更新后的题目
     await kvNamespace.put('all_questions', JSON.stringify(updatedQuestions))
 
+    console.log('题目解析更新成功')
+
     return new Response(
       JSON.stringify({ success: true, message: 'Explanation added successfully' }),
       {
@@ -72,6 +75,7 @@ router.put('/api/question/:id/explanation', async (request, env) => {
       }
     )
   } catch (error) {
+    console.error('更新题目解析失败:', error)
     return new Response(
       JSON.stringify({ success: false, message: error.message }),
       {
@@ -83,9 +87,4 @@ router.put('/api/question/:id/explanation', async (request, env) => {
       }
     )
   }
-})
-
-// 导出路由
-export default {
-  fetch: router.handle
 }
