@@ -14,6 +14,7 @@ export async function onRequestPut(context) {
 
     // 检查必要参数
     if (!questionId || !explanation) {
+      console.log('缺少必要参数:', { questionId, explanation })
       return new Response(
         JSON.stringify({ success: false, message: 'Missing required parameters' }),
         {
@@ -28,10 +29,28 @@ export async function onRequestPut(context) {
 
     // 根据题库类型选择KV命名空间
     const kvNamespace = isExam ? env.EXAM_QUESTION_BANK : env.QUESTION_BANK
+    console.log('选择的KV命名空间:', isExam ? 'EXAM_QUESTION_BANK' : 'QUESTION_BANK')
+
+    // 检查KV命名空间是否存在
+    if (!kvNamespace) {
+      console.log('KV命名空间不存在:', isExam ? 'EXAM_QUESTION_BANK' : 'QUESTION_BANK')
+      return new Response(
+        JSON.stringify({ success: false, message: 'KV namespace not bound' }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        }
+      )
+    }
 
     // 从 KV 获取所有题目
+    console.log('开始从KV获取题目...')
     const allQuestions = await kvNamespace.get('all_questions')
     if (!allQuestions) {
+      console.log('KV中没有题目数据')
       return new Response(
         JSON.stringify({ success: false, message: 'Questions not found' }),
         {
@@ -97,6 +116,7 @@ export async function onRequestPut(context) {
       })
       
       if (found) {
+        console.log('通过题目内容匹配，开始更新KV...')
         await kvNamespace.put('all_questions', JSON.stringify(updatedQuestionsByContent))
         console.log('通过题目内容匹配，更新成功')
       } else {
@@ -114,6 +134,7 @@ export async function onRequestPut(context) {
       }
     } else {
       // 保存更新后的题目
+      console.log('找到匹配的题目，开始更新KV...')
       await kvNamespace.put('all_questions', JSON.stringify(updatedQuestions))
       console.log('题目解析更新成功')
     }
